@@ -7,10 +7,13 @@ import Typography from "@mui/material/Typography";
 import Avatar from "@mui/material/Avatar";
 import ButtonBase from "@mui/material/ButtonBase";
 import IconButton from "@mui/material/IconButton";
-import { ArrowRightStartOnRectangleIcon } from "@heroicons/react/24/outline";
+import Button from "@mui/material/Button";
+import { ArrowRightStartOnRectangleIcon, PlusIcon } from "@heroicons/react/24/outline";
+import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAppShell } from "@/components/AppShellContext";
 import { logout } from "@/actions/auth";
+import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import { fmtHMS } from "@/lib/format";
 
 const PAGE_TITLES: Record<string, string> = {
@@ -29,6 +32,7 @@ export function Header() {
   const segment = pathname?.split("/")[1] || "dashboard";
   const { timer, now } = useAppShell();
   const elapsed = timer ? Math.floor((now - timer.startedAt) / 1000) + timer.baseSeconds : null;
+  const [createOpen, setCreateOpen] = useState(false);
 
   return (
     <AppBar position="sticky" elevation={0}>
@@ -60,6 +64,10 @@ export function Header() {
 
         <Box sx={{ flex: 1 }} />
 
+        <Button size="small" startIcon={<PlusIcon width={13} height={13} />} onClick={() => setCreateOpen(true)}>
+          Criar Tarefa
+        </Button>
+
         <Box sx={{ textAlign: "right" }}>
           <Typography sx={{ fontSize: 12.5, fontWeight: 500, lineHeight: 1.2 }}>Luiz Mendonça</Typography>
           <Typography sx={{ fontSize: 10.5, color: "text.disabled", lineHeight: 1.2 }}>Product Designer</Typography>
@@ -73,6 +81,7 @@ export function Header() {
           </IconButton>
         </Box>
       </Toolbar>
+      <CreateTaskDialog open={createOpen} onClose={() => setCreateOpen(false)} />
     </AppBar>
   );
 }

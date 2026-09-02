@@ -33,6 +33,7 @@ import { CheckCircleIcon as CheckCircleSolid } from "@heroicons/react/24/solid";
 import { BackButton, ColorChip, InitialsAvatar, SectionLabel } from "@/components/ui/Bits";
 import { MultiSelect, PeopleMultiSelect, LinksField, FilesField } from "@/components/shared/Selectors";
 import { IssuePickerDialog } from "@/components/tasks/IssuePickerDialog";
+import { CompletionDateDialog } from "@/components/tasks/CompletionDateDialog";
 import { useConfigLists } from "@/components/ConfigListsContext";
 import { useAppShell } from "@/components/AppShellContext";
 import { useBreadcrumbs } from "@/components/layout/BreadcrumbsContext";
@@ -68,6 +69,7 @@ export function TaskDetailView({ task, demandaId, demandaNome }: { task: Task; d
   const [newSubtask, setNewSubtask] = useState("");
   const [comment, setComment] = useState("");
   const [commentTarget, setCommentTarget] = useState("");
+  const [pendingStatus, setPendingStatus] = useState<{ id: string; name: string } | null>(null);
   const [, startTransition] = useTransition();
 
   useEffect(() => setLocal(task), [task.id, task]);
@@ -95,6 +97,22 @@ export function TaskDetailView({ task, demandaId, demandaNome }: { task: Task; d
     }
     setManualH("");
     setManualM("");
+  }
+
+  function commitStatus(s: { id: string; name: string }) {
+    if (s.name === "Concluído") {
+      setPendingStatus(s);
+      return;
+    }
+    setLocal((p) => ({ ...p, status: s.name }));
+    updateTarefaCampos(local.id, { statusId: s.id }).then(refresh);
+  }
+
+  function confirmCompletion(date: string) {
+    if (!pendingStatus) return;
+    setLocal((p) => ({ ...p, status: pendingStatus.name, end: date }));
+    updateTarefaCampos(local.id, { statusId: pendingStatus.id, dataFim: date }).then(refresh);
+    setPendingStatus(null);
   }
 
   function commitSubtask() {
@@ -187,10 +205,7 @@ export function TaskDetailView({ task, demandaId, demandaNome }: { task: Task; d
                 key={s.id}
                 color={local.status === s.name ? s.color : undefined}
                 outline={local.status !== s.name}
-                onClick={() => {
-                  setLocal((p) => ({ ...p, status: s.name }));
-                  updateTarefaCampos(local.id, { statusId: s.id }).then(refresh);
-                }}
+                onClick={() => commitStatus(s)}
               >
                 {s.name}
               </ColorChip>
@@ -403,6 +418,8 @@ export function TaskDetailView({ task, demandaId, demandaNome }: { task: Task; d
           }}
         />
       )}
+
+      <CompletionDateDialog open={Boolean(pendingStatus)} onClose={() => setPendingStatus(null)} onConfirm={confirmCompletion} />
 
       <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)} maxWidth="xs" fullWidth>
         <DialogTitle>Excluir tarefa?</DialogTitle>

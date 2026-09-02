@@ -11,6 +11,11 @@ function revalidateAll() {
   revalidatePath("/aprendizados");
 }
 
+export async function listDemandasLite() {
+  const rows = await prisma.demanda.findMany({ select: { id: true, nome: true }, orderBy: { createdAt: "desc" } });
+  return rows.map((d) => ({ id: d.id, name: d.nome }));
+}
+
 export async function createDemanda(nome: string, frenteId: string) {
   const d = await prisma.demanda.create({
     data: { nome, frenteId, statusId: "Planejamento", dataInicio: new Date().toISOString().slice(0, 10) },
