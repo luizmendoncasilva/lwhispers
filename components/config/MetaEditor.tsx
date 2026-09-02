@@ -29,6 +29,7 @@ export function MetaEditor({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState({ nome: "", cor: SWATCHES[0], descricao: "" });
+  const [error, setError] = useState<string | null>(null);
 
   function refresh() {
     startTransition(() => router.refresh());
@@ -55,10 +56,16 @@ export function MetaEditor({
     }
     refresh();
   }
-  async function remove(id: string) {
-    await onDelete(id);
-    if (editingId === id) setEditingId(null);
-    refresh();
+  async function remove(id: string, nome: string) {
+    if (!window.confirm(`Apagar "${nome}"?`)) return;
+    setError(null);
+    try {
+      await onDelete(id);
+      if (editingId === id) setEditingId(null);
+      refresh();
+    } catch (err) {
+      setError((err as Error).message);
+    }
   }
 
   const isFormOpen = adding || Boolean(editingId);
@@ -76,12 +83,15 @@ export function MetaEditor({
             <Button size="small" sx={{ fontSize: 11.5, minWidth: 0 }} onClick={() => startEdit(item)}>
               editar
             </Button>
-            <IconButton size="small" onClick={() => remove(item.id)}>
+            <IconButton size="small" onClick={() => remove(item.id, item.name)}>
               <XMarkIcon width={13} height={13} />
             </IconButton>
           </Box>
         ))}
         {items.length === 0 && <Typography sx={{ fontSize: 12.5, color: "text.disabled" }}>Nada cadastrado ainda.</Typography>}
+        {error && (
+          <Typography sx={{ fontSize: 11.5, color: "error.main" }}>{error}</Typography>
+        )}
       </Box>
 
       {isFormOpen ? (

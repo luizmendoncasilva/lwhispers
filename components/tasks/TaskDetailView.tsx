@@ -54,18 +54,24 @@ import {
   deleteTarefa,
 } from "@/actions/tarefas";
 import { removeLink, removeArquivo } from "@/actions/demandas";
+import { useToast, runOrToast } from "@/components/shared/ToastContext";
 import type { Task } from "@/lib/types";
 
 export function TaskDetailView({ task, demandaId, demandaNome }: { task: Task; demandaId: string; demandaNome: string }) {
   const router = useRouter();
   const { statusTarefa, pessoas, wlabels } = useConfigLists();
   const { timer, now, playTask, pauseTimer, goToIssue } = useAppShell();
+  const { showError } = useToast();
+  function run<T>(promise: Promise<T>, context?: string) {
+    runOrToast(promise, showError, context);
+  }
   const [local, setLocal] = useState(task);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [manualH, setManualH] = useState("");
   const [manualM, setManualM] = useState("");
+  const [manualS, setManualS] = useState("");
   const [newSubtask, setNewSubtask] = useState("");
   const [comment, setComment] = useState("");
   const [commentTarget, setCommentTarget] = useState("");
@@ -91,14 +97,15 @@ export function TaskDetailView({ task, demandaId, demandaNome }: { task: Task; d
   }
 
   function addManualTime() {
-    const secs = parseInt(manualH || "0", 10) * 3600 + parseInt(manualM || "0", 10) * 60;
+    const secs = parseInt(manualH || "0", 10) * 3600 + parseInt(manualM || "0", 10) * 60 + parseInt(manualS || "0", 10);
     if (secs > 0) {
       const next = local.trackedSeconds + secs;
       setLocal((p) => ({ ...p, trackedSeconds: next }));
-      void setTarefaTempoRastreado(local.id, next);
+      run(setTarefaTempoRastreado(local.id, next), "tempo rastreado");
     }
     setManualH("");
     setManualM("");
+    setManualS("");
   }
 
   function commitStatus(s: { id: string; name: string }) {
@@ -109,7 +116,7 @@ export function TaskDetailView({ task, demandaId, demandaNome }: { task: Task; d
     const before = local.status;
     setLocal((p) => ({ ...p, status: s.name }));
     if (before !== s.name) pushActivity("Sistema", `Status alterado de "${before}" para "${s.name}".`);
-    void updateTarefaCampos(local.id, { statusId: s.id });
+    run(updateTarefaCampos(local.id, { statusId: s.id }), "status");
   }
 
   function confirmCompletion(date: string) {
@@ -118,7 +125,7 @@ export function TaskDetailView({ task, demandaId, demandaNome }: { task: Task; d
     setLocal((p) => ({ ...p, status: pendingStatus.name, end: date }));
     if (before !== pendingStatus.name) pushActivity("Sistema", `Status alterado de "${before}" para "${pendingStatus.name}".`);
     pushActivity("Sistema", `Fim alterado para ${date}.`);
-    void updateTarefaCampos(local.id, { statusId: pendingStatus.id, dataFim: date });
+    run(updateTarefaCampos(local.id, { statusId: pendingStatus.id, dataFim: date }), "status/data");
     setPendingStatus(null);
   }
 
@@ -126,7 +133,7 @@ export function TaskDetailView({ task, demandaId, demandaNome }: { task: Task; d
     const nome = newSubtask.trim();
     if (!nome) return;
     pushActivity("Sistema", `Subtarefa "${nome}" criada.`);
-    void addSubtarefa(local.id, nome);
+    run(addSubtarefa(local.id, nome), "subtarefa");
     setNewSubtask("");
   }
 
@@ -137,7 +144,7 @@ export function TaskDetailView({ task, demandaId, demandaNome }: { task: Task; d
       ...p,
       activity: [...(p.activity || []), { id: `tmp-${Date.now()}`, author: "Luiz Mendonça", at: new Date().toISOString(), text: texto, subtaskId: commentTarget || null }],
     }));
-    void addAtividade(local.id, texto, "Luiz Mendonça", commentTarget || null);
+    run(addAtividade(local.id, texto, "Luiz Mendonça", commentTarget || null), "comentário");
     setComment("");
   }
 
@@ -165,7 +172,7 @@ export function TaskDetailView({ task, demandaId, demandaNome }: { task: Task; d
         fullWidth
         value={local.name}
         onChange={(e) => setLocal((p) => ({ ...p, name: e.target.value }))}
-        onBlur={() => updateTarefaCampos(local.id, { nome: local.name })}
+        onBlur={() => run(updateTarefaCampos(local.id, { nome: local.name }), "nome")}
         slotProps={{ input: { disableUnderline: true } }}
         sx={{ mb: 2.5, "& input": { fontFamily: "var(--font-space-grotesk)", fontSize: 24, fontWeight: 700 } }}
       />
@@ -180,7 +187,7 @@ export function TaskDetailView({ task, demandaId, demandaNome }: { task: Task; d
               fullWidth
               value={local.start || ""}
               onChange={(e) => setLocal((p) => ({ ...p, start: e.target.value }))}
-              onBlur={() => updateTarefaCampos(local.id, { dataInicio: local.start })}
+              onBlur={() => run(updateTarefaCampos(local.id, { dataInicio: local.start }), "início")}
             />
           </Box>
           <Box>
@@ -191,7 +198,7 @@ export function TaskDetailView({ task, demandaId, demandaNome }: { task: Task; d
               fullWidth
               value={local.end || ""}
               onChange={(e) => setLocal((p) => ({ ...p, end: e.target.value }))}
-              onBlur={() => updateTarefaCampos(local.id, { dataFim: local.end })}
+              onBlur={() => run(updateTarefaCampos(local.id, { dataFim: local.end }), "fim")}
             />
           </Box>
           <Box>
@@ -204,7 +211,7 @@ export function TaskDetailView({ task, demandaId, demandaNome }: { task: Task; d
                   outline={local.size !== s}
                   onClick={() => {
                     setLocal((p) => ({ ...p, size: s }));
-                    updateTarefaCampos(local.id, { tamanho: s });
+                    run(updateTarefaCampos(local.id, { tamanho: s }), "tamanho");
                   }}
                 >
                   {s}
@@ -239,7 +246,7 @@ export function TaskDetailView({ task, demandaId, demandaNome }: { task: Task; d
             placeholder="Descreva o que precisa ser feito..."
             value={local.description}
             onChange={(e) => setLocal((p) => ({ ...p, description: e.target.value }))}
-            onBlur={() => updateTarefaCampos(local.id, { descricao: local.description })}
+            onBlur={() => run(updateTarefaCampos(local.id, { descricao: local.description }), "descrição")}
           />
         </Box>
 
@@ -256,7 +263,7 @@ export function TaskDetailView({ task, demandaId, demandaNome }: { task: Task; d
                   onClick={() => {
                     setLocal((p) => ({ ...p, subtasks: subtasks.map((x) => (x.id === s.id ? { ...x, done: !x.done } : x)) }));
                     pushActivity("Sistema", `Subtarefa "${s.name}" marcada como ${!s.done ? "concluída" : "pendente"}.`);
-                    void toggleSubtarefa(s.id, !s.done);
+                    run(toggleSubtarefa(s.id, !s.done), "subtarefa");
                   }}
                   sx={{ p: 0 }}
                 >
@@ -269,7 +276,7 @@ export function TaskDetailView({ task, demandaId, demandaNome }: { task: Task; d
                   size="small"
                   onClick={() => {
                     setLocal((p) => ({ ...p, subtasks: subtasks.filter((x) => x.id !== s.id) }));
-                    void removeSubtarefa(s.id);
+                    run(removeSubtarefa(s.id), "subtarefa");
                   }}
                 >
                   <XMarkIcon width={13} height={13} />
@@ -307,8 +314,9 @@ export function TaskDetailView({ task, demandaId, demandaNome }: { task: Task; d
               </Button>
             )}
             <Divider orientation="vertical" flexItem />
-            <TextField size="small" placeholder="h" value={manualH} onChange={(e) => setManualH(e.target.value.replace(/\D/g, ""))} sx={{ width: 56 }} />
-            <TextField size="small" placeholder="min" value={manualM} onChange={(e) => setManualM(e.target.value.replace(/\D/g, ""))} sx={{ width: 62 }} />
+            <TextField size="small" placeholder="#H" value={manualH} onChange={(e) => setManualH(e.target.value.replace(/\D/g, ""))} sx={{ width: 56 }} />
+            <TextField size="small" placeholder="#M" value={manualM} onChange={(e) => setManualM(e.target.value.replace(/\D/g, ""))} sx={{ width: 56 }} />
+            <TextField size="small" placeholder="#S" value={manualS} onChange={(e) => setManualS(e.target.value.replace(/\D/g, ""))} sx={{ width: 56 }} />
             <Button size="small" variant="outlined" color="inherit" startIcon={<PlusIcon width={12} height={12} />} onClick={addManualTime}>
               add
             </Button>
@@ -323,7 +331,7 @@ export function TaskDetailView({ task, demandaId, demandaNome }: { task: Task; d
               selected={local.people}
               onChange={(v) => {
                 setLocal((p) => ({ ...p, people: v }));
-                setTarefaPessoas(local.id, v);
+                run(setTarefaPessoas(local.id, v), "pessoas");
               }}
             />
           </Box>
@@ -334,11 +342,11 @@ export function TaskDetailView({ task, demandaId, demandaNome }: { task: Task; d
               folder={`tarefas/${local.id}`}
               onAdd={(file) => {
                 setLocal((p) => ({ ...p, files: [...p.files, { id: `tmp-${Date.now()}`, name: file.name, url: file.url }] }));
-                addTarefaArquivo(local.id, file.name, file.url);
+                run(addTarefaArquivo(local.id, file.name, file.url), "arquivo");
               }}
               onRemove={(id) => {
                 setLocal((p) => ({ ...p, files: p.files.filter((f) => f.id !== id) }));
-                removeArquivo(id);
+                run(removeArquivo(id), "arquivo");
               }}
             />
           </Box>
@@ -353,7 +361,7 @@ export function TaskDetailView({ task, demandaId, demandaNome }: { task: Task; d
               getColor={(name) => wlabels.find((w) => w.name === name)?.color}
               onChange={(v) => {
                 setLocal((p) => ({ ...p, labels: v }));
-                setTarefaLabels(local.id, v);
+                run(setTarefaLabels(local.id, v), "labels");
               }}
               placeholder="Buscar label..."
             />
@@ -364,11 +372,11 @@ export function TaskDetailView({ task, demandaId, demandaNome }: { task: Task; d
               links={local.links}
               onAdd={(nome, url) => {
                 setLocal((p) => ({ ...p, links: [...p.links, { id: `tmp-${Date.now()}`, name: nome, url }] }));
-                addTarefaLink(local.id, nome, url);
+                run(addTarefaLink(local.id, nome, url), "link");
               }}
               onRemove={(id) => {
                 setLocal((p) => ({ ...p, links: p.links.filter((l) => l.id !== id) }));
-                removeLink(id);
+                run(removeLink(id), "link");
               }}
             />
           </Box>
@@ -438,7 +446,7 @@ export function TaskDetailView({ task, demandaId, demandaNome }: { task: Task; d
             const has = local.relatedIssueIds.includes(id);
             const next = has ? local.relatedIssueIds.filter((x) => x !== id) : [...local.relatedIssueIds, id];
             setLocal((p) => ({ ...p, relatedIssueIds: next }));
-            setTarefaIssuesLigadas(local.id, next);
+            run(setTarefaIssuesLigadas(local.id, next), "issues relacionadas");
           }}
         />
       )}

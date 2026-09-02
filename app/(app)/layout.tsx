@@ -8,6 +8,7 @@ import { BreadcrumbsProvider } from "@/components/layout/BreadcrumbsContext";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
+import { ToastProvider } from "@/components/shared/ToastContext";
 
 // Demandas/tarefas/issues são por usuário/tempo real — nunca prerenderizar.
 // (Frentes/W.Labels/Status/Pessoas ficam em cache via getConfigLists, revalidado só quando mudam.)
@@ -20,14 +21,16 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     <ConfigListsProvider value={configLists}>
       <AppShellProvider initialIssues={issues} initialCycles={cycles}>
         <BreadcrumbsProvider>
-          <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "background.default" }}>
-            <Sidebar />
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Header />
-              <Breadcrumbs />
-              <Box component="main">{children}</Box>
+          <ToastProvider>
+            <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "background.default" }}>
+              <Sidebar />
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Header />
+                <Breadcrumbs />
+                <Box component="main">{children}</Box>
+              </Box>
             </Box>
-          </Box>
+          </ToastProvider>
         </BreadcrumbsProvider>
       </AppShellProvider>
     </ConfigListsProvider>

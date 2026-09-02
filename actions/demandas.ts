@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
+import { deleteFileFromStorage } from "@/actions/files";
 
 function revalidateAll() {
   revalidatePath("/demandas");
@@ -25,7 +26,12 @@ export async function createDemanda(nome: string, frenteId: string) {
 }
 
 export async function deleteDemanda(id: string) {
+  const arquivos = await prisma.arquivo.findMany({
+    where: { OR: [{ demandaId: id }, { tarefa: { demandaId: id } }] },
+    select: { url: true },
+  });
   await prisma.demanda.delete({ where: { id } });
+  await Promise.all(arquivos.filter((a) => a.url).map((a) => deleteFileFromStorage(a.url!)));
   revalidateAll();
 }
 
@@ -61,7 +67,8 @@ export async function addDemandaArquivo(id: string, nome: string, url?: string) 
   revalidateAll();
 }
 export async function removeArquivo(arquivoId: string) {
-  await prisma.arquivo.delete({ where: { id: arquivoId } });
+  const arquivo = await prisma.arquivo.delete({ where: { id: arquivoId } });
+  if (arquivo.url) await deleteFileFromStorage(arquivo.url);
   revalidateAll();
 }
 

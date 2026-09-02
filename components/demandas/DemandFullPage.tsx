@@ -49,12 +49,17 @@ import {
 } from "@/actions/demandas";
 import { removeLink, removeArquivo } from "@/actions/demandas";
 import { updateTarefaCampos } from "@/actions/tarefas";
+import { useToast, runOrToast } from "@/components/shared/ToastContext";
 import type { Demand } from "@/lib/types";
 
 const SKILLS_LIST = SKILLS;
 
 export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDemands: { id: string; name: string }[] }) {
   const router = useRouter();
+  const { showError } = useToast();
+  function run<T>(promise: Promise<T>, context?: string) {
+    runOrToast(promise, showError, context);
+  }
   const { frentes, statusDemanda, pessoas, wlabels } = useConfigLists();
   const { issues, openTask } = useAppShell();
   const [local, setLocal] = useState(demand);
@@ -98,7 +103,7 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
           fullWidth
           value={local.name}
           onChange={(e) => setLocal((p) => ({ ...p, name: e.target.value }))}
-          onBlur={() => updateDemandaCampos(local.id, { nome: local.name })}
+          onBlur={() => run(updateDemandaCampos(local.id, { nome: local.name }), "nome")}
           slotProps={{ input: { disableUnderline: true } }}
           sx={{ display: "block", my: 1.25, "& input": { fontFamily: "var(--font-space-grotesk)", fontSize: 24, fontWeight: 700 } }}
         />
@@ -119,7 +124,7 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
               outline={local.status !== s.name}
               onClick={() => {
                 setLocal((p) => ({ ...p, status: s.name }));
-                updateDemandaCampos(local.id, { statusId: s.id });
+                run(updateDemandaCampos(local.id, { statusId: s.id }), "status");
               }}
             >
               {s.name}
@@ -138,7 +143,7 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
               fullWidth
               value={local.start || ""}
               onChange={(e) => setLocal((p) => ({ ...p, start: e.target.value }))}
-              onBlur={() => updateDemandaCampos(local.id, { dataInicio: local.start })}
+              onBlur={() => run(updateDemandaCampos(local.id, { dataInicio: local.start }), "início")}
             />
             <TextField
               type="date"
@@ -146,7 +151,7 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
               fullWidth
               value={local.end || ""}
               onChange={(e) => setLocal((p) => ({ ...p, end: e.target.value }))}
-              onBlur={() => updateDemandaCampos(local.id, { dataFim: local.end || null })}
+              onBlur={() => run(updateDemandaCampos(local.id, { dataFim: local.end || null }), "fim")}
             />
           </Box>
         </Box>
@@ -168,7 +173,7 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
           placeholder="https://github.com/org/repo"
           value={local.repo}
           onChange={(e) => setLocal((p) => ({ ...p, repo: e.target.value }))}
-          onBlur={() => updateDemandaCampos(local.id, { repositorio: local.repo })}
+          onBlur={() => run(updateDemandaCampos(local.id, { repositorio: local.repo }), "repositório")}
         />
       </Box>
 
@@ -180,11 +185,11 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
             folder={`demandas/${local.id}`}
             onAdd={(file) => {
               setLocal((p) => ({ ...p, files: [...p.files, { id: `tmp-${Date.now()}`, name: file.name, url: file.url }] }));
-              addDemandaArquivo(local.id, file.name, file.url);
+              run(addDemandaArquivo(local.id, file.name, file.url), "arquivo");
             }}
             onRemove={(id) => {
               setLocal((p) => ({ ...p, files: p.files.filter((f) => f.id !== id) }));
-              removeArquivo(id);
+              run(removeArquivo(id), "arquivo");
             }}
           />
         </Box>
@@ -195,7 +200,7 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
             selected={local.people}
             onChange={(v) => {
               setLocal((p) => ({ ...p, people: v }));
-              setDemandaPessoas(local.id, v);
+              run(setDemandaPessoas(local.id, v), "pessoas");
             }}
           />
           {local.people.length > 0 && (
@@ -216,7 +221,7 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
                           ...prev,
                           stakeholderUpdates: [...(prev.stakeholderUpdates || []).filter((s) => s.person !== p), { person: p, lastSentAt: today }],
                         }));
-                        void markStakeholderUpdate(local.id, p);
+                        run(markStakeholderUpdate(local.id, p), "atualização enviada");
                       }}
                     >
                       marcar hoje
@@ -235,11 +240,11 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
           links={local.links}
           onAdd={(nome, url) => {
             setLocal((p) => ({ ...p, links: [...p.links, { id: `tmp-${Date.now()}`, name: nome, url }] }));
-            addDemandaLink(local.id, nome, url);
+            run(addDemandaLink(local.id, nome, url), "link");
           }}
           onRemove={(id) => {
             setLocal((p) => ({ ...p, links: p.links.filter((l) => l.id !== id) }));
-            removeLink(id);
+            run(removeLink(id), "link");
           }}
         />
       </Box>
@@ -254,7 +259,7 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
             getLabel={(id) => wlabels.find((w) => w.id === id)?.name || id}
             onChange={(v) => {
               setLocal((p) => ({ ...p, wlabels: v }));
-              setDemandaWLabels(local.id, v);
+              run(setDemandaWLabels(local.id, v), "w.labels");
             }}
             placeholder="Buscar W.Label..."
           />
@@ -266,7 +271,7 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
             selected={local.skills || []}
             onChange={(v) => {
               setLocal((p) => ({ ...p, skills: v }));
-              updateDemandaCampos(local.id, { skills: v });
+              run(updateDemandaCampos(local.id, { skills: v }), "skills");
             }}
             placeholder="Buscar skill..."
           />
@@ -282,7 +287,7 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
             getLabel={demandName}
             onChange={(v) => {
               setLocal((p) => ({ ...p, blockedBy: v }));
-              setDemandaBlockedBy(local.id, v);
+              run(setDemandaBlockedBy(local.id, v), "bloqueada por");
             }}
             placeholder="Buscar demanda..."
           />
@@ -300,7 +305,7 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
             getLabel={demandName}
             onChange={(v) => {
               setLocal((p) => ({ ...p, blocks: v }));
-              setDemandaBlocks(local.id, v);
+              run(setDemandaBlocks(local.id, v), "bloqueia");
             }}
             placeholder="Buscar demanda..."
           />
@@ -343,7 +348,7 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
                 ...prev,
                 decisions: [...(prev.decisions || []), { id: `tmp-${Date.now()}`, text: texto, author: "Luiz Mendonça", at: new Date().toISOString() }],
               }));
-              void addDemandaDecisao(local.id, texto, "Luiz Mendonça");
+              run(addDemandaDecisao(local.id, texto, "Luiz Mendonça"), "decisão");
               setNewDecision("");
             }}
           >
@@ -361,7 +366,7 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
           placeholder="Anotações livres sobre a demanda..."
           value={local.observations}
           onChange={(e) => setLocal((p) => ({ ...p, observations: e.target.value }))}
-          onBlur={() => updateDemandaCampos(local.id, { observacoes: local.observations })}
+          onBlur={() => run(updateDemandaCampos(local.id, { observacoes: local.observations }), "observações")}
         />
       </Box>
 

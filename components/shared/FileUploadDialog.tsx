@@ -10,12 +10,7 @@ import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import LinearProgress from "@mui/material/LinearProgress";
 import { ArrowUpTrayIcon, DocumentIcon } from "@heroicons/react/24/outline";
-import { getSupabaseBrowserClient, ATTACHMENTS_BUCKET } from "@/lib/supabase-client";
-
-export interface UploadedFile {
-  name: string;
-  url: string;
-}
+import { uploadFile, type UploadedFile } from "@/actions/files";
 
 export function FileUploadDialog({
   open,
@@ -38,21 +33,15 @@ export function FileUploadDialog({
     setUploading(true);
     setError(null);
     try {
-      const supabase = getSupabaseBrowserClient();
       for (const file of Array.from(files)) {
-        const path = `${folder}/${Date.now()}-${file.name}`;
-        const { error: uploadError } = await supabase.storage.from(ATTACHMENTS_BUCKET).upload(path, file, { upsert: false });
-        if (uploadError) throw uploadError;
-        const { data } = supabase.storage.from(ATTACHMENTS_BUCKET).getPublicUrl(path);
-        onUploaded({ name: file.name, url: data.publicUrl });
+        const formData = new FormData();
+        formData.set("file", file);
+        const result = await uploadFile(folder, formData);
+        onUploaded(result);
       }
       onClose();
     } catch (err) {
-      setError(
-        `Não foi possível enviar o arquivo. Confirme que o bucket "${ATTACHMENTS_BUCKET}" existe no Supabase Storage (público, com policy de insert liberada). Detalhe: ${
-          (err as Error).message
-        }`
-      );
+      setError(`Não foi possível enviar o arquivo: ${(err as Error).message}`);
     } finally {
       setUploading(false);
     }
@@ -108,9 +97,7 @@ export function FileUploadDialog({
             }}
           />
         </Box>
-        {error && (
-          <Typography sx={{ fontSize: 12, color: "error.main", mt: 1.5 }}>{error}</Typography>
-        )}
+        {error && <Typography sx={{ fontSize: 12, color: "error.main", mt: 1.5 }}>{error}</Typography>}
       </DialogContent>
       <DialogActions>
         <Button color="inherit" onClick={onClose} disabled={uploading}>

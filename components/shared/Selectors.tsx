@@ -99,7 +99,7 @@ export function LinksField({ links, onAdd, onRemove }: { links: LinkItem[]; onAd
               component="span"
               onClick={(e: React.MouseEvent) => {
                 e.preventDefault();
-                onRemove(l.id);
+                if (window.confirm(`Remover o link "${l.name}"?`)) onRemove(l.id);
               }}
               sx={{ color: "text.disabled", cursor: "pointer", display: "flex" }}
             >
@@ -174,7 +174,7 @@ export function FilesField({
               onClick={(e: React.MouseEvent) => {
                 e.preventDefault();
                 e.stopPropagation();
-                onRemove(f.id);
+                if (window.confirm(`Apagar o arquivo "${f.name}"? Essa ação não pode ser desfeita.`)) onRemove(f.id);
               }}
               sx={{ color: "text.disabled", cursor: "pointer", display: "flex", flexShrink: 0 }}
             >

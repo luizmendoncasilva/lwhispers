@@ -1,5 +1,6 @@
 "use server";
 
+import { Prisma } from "@prisma/client";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { prisma } from "@/lib/db";
 import { CONFIG_LISTS_TAG } from "@/lib/config-lists-data";
@@ -7,6 +8,18 @@ import { CONFIG_LISTS_TAG } from "@/lib/config-lists-data";
 function revalidateConfig() {
   revalidateTag(CONFIG_LISTS_TAG, { expire: 0 });
   revalidatePath("/configuracoes");
+}
+
+async function safeDelete(action: () => Promise<unknown>, emUsoMsg: string) {
+  try {
+    await action();
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2003") {
+      throw new Error(emUsoMsg);
+    }
+    throw err;
+  }
+  revalidateConfig();
 }
 
 type MetaInput = { nome: string; cor: string; descricao?: string };
@@ -20,8 +33,7 @@ export async function updateFrente(id: string, data: MetaInput) {
   revalidateConfig();
 }
 export async function deleteFrente(id: string) {
-  await prisma.frente.delete({ where: { id } });
-  revalidateConfig();
+  await safeDelete(() => prisma.frente.delete({ where: { id } }), "Essa frente está em uso por alguma demanda — mude a frente dela antes de apagar.");
 }
 
 export async function createWLabel(data: MetaInput) {
@@ -46,8 +58,7 @@ export async function updateStatusTarefa(id: string, data: MetaInput) {
   revalidateConfig();
 }
 export async function deleteStatusTarefa(id: string) {
-  await prisma.statusTarefa.delete({ where: { id } });
-  revalidateConfig();
+  await safeDelete(() => prisma.statusTarefa.delete({ where: { id } }), "Esse status está em uso por alguma tarefa — mude o status dela antes de apagar.");
 }
 
 export async function createStatusDemanda(data: MetaInput) {
@@ -59,8 +70,10 @@ export async function updateStatusDemanda(id: string, data: MetaInput) {
   revalidateConfig();
 }
 export async function deleteStatusDemanda(id: string) {
-  await prisma.statusDemanda.delete({ where: { id } });
-  revalidateConfig();
+  await safeDelete(
+    () => prisma.statusDemanda.delete({ where: { id } }),
+    "Esse status está em uso por alguma demanda — mude o status dela antes de apagar."
+  );
 }
 
 export async function createPessoa(nome: string) {
