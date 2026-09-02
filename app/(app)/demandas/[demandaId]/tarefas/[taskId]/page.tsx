@@ -5,13 +5,11 @@ import { TaskDetailView } from "@/components/tasks/TaskDetailView";
 
 export default async function TarefaDetailPage({ params }: { params: Promise<{ demandaId: string; taskId: string }> }) {
   const { demandaId, taskId } = await params;
-  const demanda = await prisma.demanda.findUnique({ where: { id: demandaId } });
+  const [demanda, tarefaRow] = await Promise.all([
+    prisma.demanda.findUnique({ where: { id: demandaId } }),
+    prisma.tarefa.findUnique({ where: { id: taskId }, include: demandaInclude.tarefas.include }),
+  ]);
   if (!demanda) notFound();
-
-  const tarefaRow = await prisma.tarefa.findUnique({
-    where: { id: taskId },
-    include: demandaInclude.tarefas.include,
-  });
   if (!tarefaRow || tarefaRow.demandaId !== demandaId) notFound();
 
   const task = serializeTarefa(tarefaRow, demandaId, demanda.nome);
