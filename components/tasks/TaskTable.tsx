@@ -29,7 +29,7 @@ export function TaskTable({
 }) {
   const { statusTarefa } = useConfigLists();
   const { timer, now, goToIssue } = useAppShell();
-  const cols = ["Nome", "Início", "Fim", "Tamanho", "Rastreado", ...(showStatus ? ["Status"] : []), "Labels", "Issues relacionadas"];
+  const cols = ["ID", "Nome", "Início", "Fim", "Tamanho", "Rastreado", ...(showStatus ? ["Status"] : []), "Labels", "Issues relacionadas"];
 
   return (
     <TableContainer component={Paper} sx={{ overflowX: "auto" }}>
@@ -49,6 +49,7 @@ export function TaskTable({
             const seconds = isRunning ? Math.floor((now - timer!.startedAt) / 1000) + timer!.baseSeconds : tk.trackedSeconds;
             return (
               <TableRow key={tk.id} hover onClick={() => onOpenTask(tk)} sx={{ cursor: "pointer" }}>
+                <TableCell sx={{ whiteSpace: "nowrap", fontFamily: "var(--font-jetbrains-mono)", color: "text.disabled" }}>T-{tk.numero}</TableCell>
                 <TableCell sx={{ minWidth: 200 }}>
                   <Typography sx={{ fontSize: 13 }}>{tk.name}</Typography>
                   {showDemand && tk.demandName && (

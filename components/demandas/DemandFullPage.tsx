@@ -26,8 +26,9 @@ import {
 } from "@heroicons/react/24/outline";
 import { BackButton, ColorChip, IconBtn, SectionLabel } from "@/components/ui/Bits";
 import { PeopleMultiSelect, MultiSelect, LinksField, FilesField } from "@/components/shared/Selectors";
-import { TaskCard } from "@/components/tasks/TaskCard";
 import { TaskTable } from "@/components/tasks/TaskTable";
+import { KanbanBoard } from "@/components/tasks/KanbanBoard";
+import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import { useConfigLists } from "@/components/ConfigListsContext";
 import { useAppShell } from "@/components/AppShellContext";
 import { useBreadcrumbs } from "@/components/layout/BreadcrumbsContext";
@@ -47,8 +48,8 @@ import {
   deleteDemanda,
 } from "@/actions/demandas";
 import { removeLink, removeArquivo } from "@/actions/demandas";
-import { createTarefa } from "@/actions/tarefas";
-import type { Demand, Task } from "@/lib/types";
+import { updateTarefaCampos } from "@/actions/tarefas";
+import type { Demand } from "@/lib/types";
 
 const SKILLS_LIST = SKILLS;
 
@@ -59,7 +60,6 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
   const [local, setLocal] = useState(demand);
   const [view, setView] = useState<"kanban" | "lista">("kanban");
   const [addingTask, setAddingTask] = useState(false);
-  const [newTaskName, setNewTaskName] = useState("");
   const [newDecision, setNewDecision] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -86,18 +86,6 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
   const decisions = local.decisions || [];
   const otherDemands = allDemands.filter((d) => d.id !== local.id);
   const demandName = (id: string) => allDemands.find((d) => d.id === id)?.name || id;
-
-  function taskStatuses() {
-    return Array.from(new Set(local.tasks.map((t) => t.status)));
-  }
-
-  async function addTask() {
-    if (!newTaskName.trim()) return;
-    const id = await createTarefa(local.id, newTaskName.trim());
-    setNewTaskName("");
-    setAddingTask(false);
-    refresh();
-  }
 
   return (
     <Box sx={{ px: 3.5, py: 3.25, pb: 7.5 }}>
@@ -194,9 +182,10 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
           <SectionLabel icon={PaperClipIcon}>Arquivos relacionados</SectionLabel>
           <FilesField
             files={local.files}
-            onAdd={(nome) => {
-              setLocal((p) => ({ ...p, files: [...p.files, { id: `tmp-${Date.now()}`, name: nome }] }));
-              addDemandaArquivo(local.id, nome).then(refresh);
+            folder={`demandas/${local.id}`}
+            onAdd={(file) => {
+              setLocal((p) => ({ ...p, files: [...p.files, { id: `tmp-${Date.now()}`, name: file.name, url: file.url }] }));
+              addDemandaArquivo(local.id, file.name, file.url).then(refresh);
             }}
             onRemove={(id) => {
               setLocal((p) => ({ ...p, files: p.files.filter((f) => f.id !== id) }));
@@ -387,47 +376,24 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
           </Box>
         </Box>
 
-        {addingTask && (
-          <Box sx={{ display: "flex", gap: 0.75, mb: 1.75 }}>
-            <TextField
-              autoFocus
-              size="small"
-              fullWidth
-              placeholder="Nome da tarefa"
-              value={newTaskName}
-              onChange={(e) => setNewTaskName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && addTask()}
-            />
-            <Button size="small" onClick={addTask}>
-              Criar
-            </Button>
-            <Button size="small" color="inherit" onClick={() => setAddingTask(false)}>
-              Cancelar
-            </Button>
-          </Box>
-        )}
-
         {view === "kanban" ? (
-          <Box sx={{ display: "flex", gap: 1.5, overflowX: "auto", pb: 0.75 }}>
-            {["Backlog", "Em andamento", "Bloqueado", "Revisão", "Concluído"].map((status) => (
-              <Box key={status} sx={{ minWidth: 220, flex: "1 0 220px" }}>
-                <Typography sx={{ fontFamily: "var(--font-jetbrains-mono)", fontSize: 10.5, color: "text.disabled", mb: 1, letterSpacing: 0.3 }}>
-                  {status.toUpperCase()} · {local.tasks.filter((tk) => tk.status === status).length}
-                </Typography>
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                  {local.tasks
-                    .filter((tk) => tk.status === status)
-                    .map((tk) => (
-                      <TaskCard key={tk.id} task={tk} onClick={() => openTask(tk)} />
-                    ))}
-                </Box>
-              </Box>
-            ))}
-          </Box>
+          <KanbanBoard
+            tasks={local.tasks}
+            onOpenTask={openTask}
+            onStatusChange={(task, status, completionDate) => {
+              setLocal((p) => ({
+                ...p,
+                tasks: p.tasks.map((t) => (t.id === task.id ? { ...t, status: status.name, end: completionDate || t.end } : t)),
+              }));
+              updateTarefaCampos(task.id, { statusId: status.id, ...(completionDate ? { dataFim: completionDate } : {}) }).then(refresh);
+            }}
+          />
         ) : (
           <TaskTable tasks={local.tasks} showStatus onOpenTask={openTask} />
         )}
       </Box>
+
+      <CreateTaskDialog open={addingTask} onClose={() => setAddingTask(false)} fixedDemandaId={local.id} />
 
       <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)} maxWidth="xs" fullWidth>
         <DialogTitle>Excluir demanda?</DialogTitle>

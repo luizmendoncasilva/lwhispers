@@ -118,6 +118,7 @@ model DemandaStakeholderUpdate {
 
 model Tarefa {
   id             String    @id @default(cuid())
+  numero         Int       @unique @default(autoincrement())
   demandaId      String
   nome           String
   descricao      String?   @default("")
@@ -215,4 +216,23 @@ model CycleCache {
   cycleId      String   @id
   dadosJson    Json
   atualizadoEm DateTime @default(now())
+}
+
+// Fase 6 — telemetria simples de uso das APIs externas (Configurações > Usos e limites).
+model ApiCallLog {
+  id        String   @id @default(cuid())
+  provider  String   // "gemini" | "linear"
+  action    String
+  ok        Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([provider, createdAt])
+}
+
+model ApiLimitSnapshot {
+  provider     String    @id // "linear"
+  limit        Int?
+  remaining    Int?
+  resetAt      DateTime?
+  updatedAt    DateTime  @updatedAt
 }

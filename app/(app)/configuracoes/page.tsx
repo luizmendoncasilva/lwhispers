@@ -1,13 +1,15 @@
 import { prisma } from "@/lib/db";
+import { getUsageSummary } from "@/lib/usage";
 import { ConfigView } from "@/components/config/ConfigView";
 
 export default async function ConfiguracoesPage() {
-  const [frentes, wlabels, statusTarefa, statusDemanda, pessoas] = await Promise.all([
+  const [frentes, wlabels, statusTarefa, statusDemanda, pessoas, usage] = await Promise.all([
     prisma.frente.findMany({ orderBy: { ordem: "asc" } }),
     prisma.wLabel.findMany({ orderBy: { ordem: "asc" } }),
     prisma.statusTarefa.findMany({ orderBy: { ordem: "asc" } }),
     prisma.statusDemanda.findMany({ orderBy: { ordem: "asc" } }),
     prisma.pessoa.findMany({ orderBy: { ordem: "asc" } }),
+    getUsageSummary(),
   ]);
 
   return (
@@ -17,6 +19,7 @@ export default async function ConfiguracoesPage() {
       statusTarefa={statusTarefa.map((s) => ({ id: s.id, name: s.nome, color: s.cor, description: s.descricao ?? undefined }))}
       statusDemanda={statusDemanda.map((s) => ({ id: s.id, name: s.nome, color: s.cor, description: s.descricao ?? undefined }))}
       pessoas={pessoas.map((p) => ({ id: p.id, name: p.nome }))}
+      usage={usage}
     />
   );
 }

@@ -4,12 +4,16 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
+import Tabs from "@mui/material/Tabs";
+import Tab from "@mui/material/Tab";
 import Typography from "@mui/material/Typography";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import { TagIcon, ListBulletIcon, RectangleStackIcon, UsersIcon, PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { SectionLabel } from "@/components/ui/Bits";
 import { MetaEditor } from "@/components/config/MetaEditor";
+import { UsageView } from "@/components/config/UsageView";
+import type { UsageSummary } from "@/lib/usage";
 import {
   createFrente,
   updateFrente,
@@ -100,20 +104,32 @@ export function ConfigView({
   statusTarefa,
   statusDemanda,
   pessoas,
+  usage,
 }: {
   frentes: MetaStatus[];
   wlabels: MetaStatus[];
   statusTarefa: MetaStatus[];
   statusDemanda: MetaStatus[];
   pessoas: { id: string; name: string }[];
+  usage: UsageSummary;
 }) {
+  const [tab, setTab] = useState<"geral" | "usos">("geral");
   return (
     <Box sx={{ px: 3.5, py: 3.25, pb: 7.5 }}>
-      <Typography sx={{ fontSize: 12, color: "text.disabled", maxWidth: 640, mb: 2.5, lineHeight: 1.5 }}>
-        Cada frente, W.Label e status tem uma cor e uma descrição — usadas em todo o app. Excluir um item aqui não remove o vínculo já existente em
-        demandas/tarefas que o usam.
-      </Typography>
-      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.75, maxWidth: 980 }}>
+      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2.5, minHeight: 36 }}>
+        <Tab value="geral" label="Geral" sx={{ minHeight: 36, py: 1 }} />
+        <Tab value="usos" label="Usos e limites" sx={{ minHeight: 36, py: 1 }} />
+      </Tabs>
+
+      {tab === "usos" ? (
+        <UsageView usage={usage} />
+      ) : (
+        <>
+          <Typography sx={{ fontSize: 12, color: "text.disabled", maxWidth: 640, mb: 2.5, lineHeight: 1.5 }}>
+            Cada frente, W.Label e status tem uma cor e uma descrição — usadas em todo o app. Excluir um item aqui não remove o vínculo já existente em
+            demandas/tarefas que o usam.
+          </Typography>
+          <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.75, maxWidth: 980 }}>
         <ConfigSection title="Frentes (labels de demanda)" icon={TagIcon}>
           <MetaEditor
             items={frentes}
@@ -151,7 +167,9 @@ export function ConfigView({
           />
         </ConfigSection>
         <PessoasSection pessoas={pessoas} />
-      </Box>
+          </Box>
+        </>
+      )}
     </Box>
   );
 }

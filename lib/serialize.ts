@@ -31,8 +31,8 @@ export const demandaInclude = {
 export type DemandaWithRelations = Prisma.DemandaGetPayload<{ include: typeof demandaInclude }>;
 export type TarefaWithRelations = DemandaWithRelations["tarefas"][number];
 
-function mapFiles(files: { id: string; nome: string }[]): FileItem[] {
-  return files.map((f) => ({ id: f.id, name: f.nome }));
+function mapFiles(files: { id: string; nome: string; url: string | null }[]): FileItem[] {
+  return files.map((f) => ({ id: f.id, name: f.nome, url: f.url ?? undefined }));
 }
 function mapLinks(links: { id: string; nome: string; url: string }[]): LinkItem[] {
   return links.map((l) => ({ id: l.id, name: l.nome, url: l.url }));
@@ -41,6 +41,7 @@ function mapLinks(links: { id: string; nome: string; url: string }[]): LinkItem[
 export function serializeTarefa(t: TarefaWithRelations, demandId?: string, demandName?: string): Task {
   return {
     id: t.id,
+    numero: t.numero,
     demandId,
     demandName,
     name: t.nome,

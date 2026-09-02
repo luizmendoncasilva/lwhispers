@@ -56,8 +56,8 @@ export async function removeLink(linkId: string) {
   revalidateAll();
 }
 
-export async function addDemandaArquivo(id: string, nome: string) {
-  await prisma.arquivo.create({ data: { nome, demandaId: id } });
+export async function addDemandaArquivo(id: string, nome: string, url?: string) {
+  await prisma.arquivo.create({ data: { nome, url, demandaId: id } });
   revalidateAll();
 }
 export async function removeArquivo(arquivoId: string) {

@@ -138,7 +138,10 @@ export function TaskDetailView({ task, demandaId, demandaNome }: { task: Task; d
       <BackButton onClick={() => router.push(`/demandas/${demandaId}`)}>{demandaNome}</BackButton>
 
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
-        <ColorChip color={statusTarefa.find((s) => s.name === local.status)?.color}>{local.status}</ColorChip>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Typography sx={{ fontFamily: "var(--font-jetbrains-mono)", fontSize: 12, color: "text.disabled" }}>T-{local.numero}</Typography>
+          <ColorChip color={statusTarefa.find((s) => s.name === local.status)?.color}>{local.status}</ColorChip>
+        </Box>
         <Button size="small" color="error" startIcon={<TrashIcon width={13} height={13} />} onClick={() => setConfirmDelete(true)}>
           Excluir tarefa
         </Button>
@@ -308,9 +311,10 @@ export function TaskDetailView({ task, demandaId, demandaNome }: { task: Task; d
             <SectionLabel icon={PaperClipIcon}>Arquivos relacionados</SectionLabel>
             <FilesField
               files={local.files}
-              onAdd={(nome) => {
-                setLocal((p) => ({ ...p, files: [...p.files, { id: `tmp-${Date.now()}`, name: nome }] }));
-                addTarefaArquivo(local.id, nome).then(refresh);
+              folder={`tarefas/${local.id}`}
+              onAdd={(file) => {
+                setLocal((p) => ({ ...p, files: [...p.files, { id: `tmp-${Date.now()}`, name: file.name, url: file.url }] }));
+                addTarefaArquivo(local.id, file.name, file.url).then(refresh);
               }}
               onRemove={(id) => {
                 setLocal((p) => ({ ...p, files: p.files.filter((f) => f.id !== id) }));

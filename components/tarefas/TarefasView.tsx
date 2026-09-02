@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import Box from "@mui/material/Box";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
@@ -8,13 +9,17 @@ import { MagnifyingGlassIcon, Squares2X2Icon, ListBulletIcon } from "@heroicons/
 import { IconBtn } from "@/components/ui/Bits";
 import { CycleSwitcherButton } from "@/components/shared/CycleSwitcher";
 import { TaskTable } from "@/components/tasks/TaskTable";
-import { TaskCard } from "@/components/tasks/TaskCard";
+import { KanbanBoard } from "@/components/tasks/KanbanBoard";
 import { useAppShell } from "@/components/AppShellContext";
+import { updateTarefaCampos } from "@/actions/tarefas";
 import { monthRange } from "@/lib/format";
 import type { Cycle, Task } from "@/lib/types";
 
 export function TarefasView({ tasks }: { tasks: Task[] }) {
+  const router = useRouter();
   const { issues, openTask } = useAppShell();
+  const [local, setLocal] = useState(tasks);
+  const [, startTransition] = useTransition();
   const defaultRange = monthRange();
   const [search, setSearch] = useState("");
   const [dateStart, setDateStart] = useState(defaultRange.start);
@@ -22,7 +27,9 @@ export function TarefasView({ tasks }: { tasks: Task[] }) {
   const [cycleFilter, setCycleFilter] = useState<Cycle | null>(null);
   const [view, setView] = useState<"kanban" | "lista">("lista");
 
-  const filtered = tasks.filter((tk) => {
+  useEffect(() => setLocal(tasks), [tasks]);
+
+  const filtered = local.filter((tk) => {
     if (search && !tk.name.toLowerCase().includes(search.toLowerCase())) return false;
     if (tk.start && dateStart && tk.start < dateStart) return false;
     if (tk.start && dateEnd && tk.start > dateEnd) return false;
@@ -66,22 +73,18 @@ export function TarefasView({ tasks }: { tasks: Task[] }) {
       {view === "lista" ? (
         <TaskTable tasks={filtered} showStatus showDemand onOpenTask={openTask} />
       ) : (
-        <Box sx={{ display: "flex", gap: 1.5, overflowX: "auto", pb: 0.75 }}>
-          {["Backlog", "Em andamento", "Bloqueado", "Revisão", "Concluído"].map((status) => (
-            <Box key={status} sx={{ minWidth: 220, flex: "1 0 220px" }}>
-              <Typography sx={{ fontFamily: "var(--font-jetbrains-mono)", fontSize: 10.5, color: "text.disabled", mb: 1, letterSpacing: 0.3 }}>
-                {status.toUpperCase()} · {filtered.filter((tk) => tk.status === status).length}
-              </Typography>
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                {filtered
-                  .filter((tk) => tk.status === status)
-                  .map((tk) => (
-                    <TaskCard key={tk.id} task={tk} onClick={() => openTask(tk)} />
-                  ))}
-              </Box>
-            </Box>
-          ))}
-        </Box>
+        <KanbanBoard
+          tasks={filtered}
+          onOpenTask={openTask}
+          onStatusChange={(task, status, completionDate) => {
+            setLocal((prev) =>
+              prev.map((t) => (t.id === task.id ? { ...t, status: status.name, end: completionDate || t.end } : t))
+            );
+            updateTarefaCampos(task.id, { statusId: status.id, ...(completionDate ? { dataFim: completionDate } : {}) }).then(() =>
+              startTransition(() => router.refresh())
+            );
+          }}
+        />
       )}
     </Box>
   );

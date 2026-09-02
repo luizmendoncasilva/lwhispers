@@ -75,8 +75,8 @@ export async function addTarefaLink(id: string, nome: string, url: string) {
   revalidateAll();
 }
 
-export async function addTarefaArquivo(id: string, nome: string) {
-  await prisma.arquivo.create({ data: { nome, tarefaId: id } });
+export async function addTarefaArquivo(id: string, nome: string, url?: string) {
+  await prisma.arquivo.create({ data: { nome, url, tarefaId: id } });
   revalidateAll();
 }
 

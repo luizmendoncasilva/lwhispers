@@ -21,14 +21,19 @@ function InfoRow({ label, children }: { label: string; children: React.ReactNode
   );
 }
 
-export function TaskCard({ task, onClick }: { task: Task; onClick: () => void }) {
+export function TaskCard({ task, onClick, draggable }: { task: Task; onClick: () => void; draggable?: boolean }) {
   const { timer, now, goToIssue } = useAppShell();
   const isRunning = timer?.taskId === task.id;
   const seconds = isRunning ? Math.floor((now - timer!.startedAt) / 1000) + timer!.baseSeconds : task.trackedSeconds;
 
   return (
-    <Card>
+    <Card
+      draggable={draggable}
+      onDragStart={draggable ? (e) => e.dataTransfer.setData("text/task-id", task.id) : undefined}
+      sx={draggable ? { cursor: "grab", "&:active": { cursor: "grabbing" } } : undefined}
+    >
       <CardActionArea onClick={onClick} sx={{ p: 1.5 }}>
+        <Typography sx={{ fontFamily: "var(--font-jetbrains-mono)", fontSize: 10, color: "text.disabled", mb: 0.5 }}>T-{task.numero}</Typography>
         <Typography sx={{ fontSize: 13, mb: 1, lineHeight: 1.35, fontWeight: 500 }}>{task.name}</Typography>
         <Box sx={{ borderTop: "1px solid", borderColor: "divider", pt: 0.75 }}>
           <InfoRow label="TAMANHO">

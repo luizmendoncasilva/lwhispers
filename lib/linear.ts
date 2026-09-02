@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { logApiCall, saveLinearLimitSnapshot } from "@/lib/usage";
 import type { Activity, Cycle, Issue, IssueStatus } from "@/lib/types";
 
 const LINEAR_API = "https://api.linear.app/graphql";
@@ -6,13 +7,17 @@ const LINEAR_API = "https://api.linear.app/graphql";
 async function linearFetch<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
   const key = process.env.LINEAR_API_KEY;
   if (!key) throw new Error("LINEAR_API_KEY não configurada em .env.local");
+  const opName = query.match(/(?:query|mutation)\s+(\w+)/)?.[1] || "unknown";
   const res = await fetch(LINEAR_API, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: key },
     body: JSON.stringify({ query, variables }),
     cache: "no-store",
   });
+  void saveLinearLimitSnapshot(res.headers);
   const json = await res.json();
+  const ok = !json.errors;
+  void logApiCall("linear", opName, ok);
   if (json.errors) throw new Error(json.errors.map((e: { message: string }) => e.message).join("; "));
   return json.data as T;
 }

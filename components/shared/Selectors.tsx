@@ -9,6 +9,7 @@ import Chip from "@mui/material/Chip";
 import Button from "@mui/material/Button";
 import { PlusIcon, XMarkIcon, PaperClipIcon, LinkIcon } from "@heroicons/react/24/outline";
 import { InitialsAvatar } from "@/components/ui/Bits";
+import { FileUploadDialog } from "@/components/shared/FileUploadDialog";
 import type { FileItem, LinkItem } from "@/lib/types";
 
 export function MultiSelect({
@@ -127,13 +128,28 @@ export function LinksField({ links, onAdd, onRemove }: { links: LinkItem[]; onAd
   );
 }
 
-export function FilesField({ files, onAdd, onRemove }: { files: FileItem[]; onAdd: (nome: string) => void; onRemove: (id: string) => void }) {
+export function FilesField({
+  files,
+  onAdd,
+  onRemove,
+  folder,
+}: {
+  files: FileItem[];
+  onAdd: (file: { name: string; url: string }) => void;
+  onRemove: (id: string) => void;
+  folder: string;
+}) {
+  const [uploadOpen, setUploadOpen] = useState(false);
   return (
     <Box>
       <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
         {files.map((f) => (
           <Box
             key={f.id}
+            component={f.url ? "a" : "div"}
+            href={f.url}
+            target={f.url ? "_blank" : undefined}
+            rel={f.url ? "noreferrer" : undefined}
             sx={{
               display: "flex",
               alignItems: "center",
@@ -144,26 +160,40 @@ export function FilesField({ files, onAdd, onRemove }: { files: FileItem[]; onAd
               border: "1px solid",
               borderColor: "divider",
               bgcolor: "background.default",
+              textDecoration: "none",
+              color: "text.primary",
+              cursor: f.url ? "pointer" : "default",
             }}
           >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 0.9 }}>
-              <PaperClipIcon width={13} height={13} />
-              <Typography sx={{ fontSize: 13 }}>{f.name}</Typography>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.9, minWidth: 0 }}>
+              <PaperClipIcon width={13} height={13} style={{ flexShrink: 0 }} />
+              <Typography sx={{ fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</Typography>
             </Box>
-            <Box onClick={() => onRemove(f.id)} sx={{ color: "text.disabled", cursor: "pointer", display: "flex" }}>
+            <Box
+              component="span"
+              onClick={(e: React.MouseEvent) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onRemove(f.id);
+              }}
+              sx={{ color: "text.disabled", cursor: "pointer", display: "flex", flexShrink: 0 }}
+            >
               <XMarkIcon width={13} height={13} />
             </Box>
           </Box>
         ))}
       </Box>
-      <Button
-        size="small"
-        startIcon={<PlusIcon width={13} height={13} />}
-        onClick={() => onAdd(`arquivo-${files.length + 1}.pdf`)}
-        sx={{ mt: 1, px: 0 }}
-      >
+      <Button size="small" startIcon={<PlusIcon width={13} height={13} />} onClick={() => setUploadOpen(true)} sx={{ mt: 1, px: 0 }}>
         Anexar arquivo
       </Button>
+      {uploadOpen && (
+        <FileUploadDialog
+          open={uploadOpen}
+          onClose={() => setUploadOpen(false)}
+          folder={folder}
+          onUploaded={(file) => onAdd(file)}
+        />
+      )}
     </Box>
   );
 }

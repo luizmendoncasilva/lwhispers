@@ -74,6 +74,7 @@ export interface LinkItem {
 export interface FileItem {
   id: string;
   name: string;
+  url?: string;
 }
 
 export interface Subtask {
@@ -96,6 +97,7 @@ export interface StakeholderUpdate {
 
 export interface Task {
   id: string;
+  numero: number;
   demandId?: string;
   demandName?: string;
   name: string;
