@@ -1,0 +1,218 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Frente {
+  id          String    @id @default(cuid())
+  nome        String
+  cor         String
+  descricao   String?
+  ordem       Int       @default(0)
+  demandas    Demanda[]
+}
+
+model WLabel {
+  id          String   @id @default(cuid())
+  nome        String
+  cor         String
+  descricao   String?
+  ordem       Int      @default(0)
+  demandas    Demanda[]
+  tarefas     Tarefa[]
+}
+
+model StatusTarefa {
+  id        String   @id @default(cuid())
+  nome      String
+  cor       String
+  descricao String?
+  ordem     Int      @default(0)
+  tarefas   Tarefa[]
+}
+
+model StatusDemanda {
+  id        String    @id @default(cuid())
+  nome      String
+  cor       String
+  descricao String?
+  ordem     Int       @default(0)
+  demandas  Demanda[]
+}
+
+model Pessoa {
+  id       String    @id @default(cuid())
+  nome     String
+  ordem    Int       @default(0)
+  demandas Demanda[]
+  tarefas  Tarefa[]
+}
+
+model Demanda {
+  id             String   @id @default(cuid())
+  nome           String
+  frenteId       String
+  statusId       String
+  dataInicio     String
+  dataFim        String?
+  repositorio    String?
+  observacoes    String?  @default("")
+  skills         String[] @default([])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  frente         Frente          @relation(fields: [frenteId], references: [id])
+  status         StatusDemanda   @relation(fields: [statusId], references: [id])
+  tarefas        Tarefa[]
+  pessoas        Pessoa[]
+  wlabels        WLabel[]
+  arquivos       Arquivo[]
+  links          Link[]
+  issuesLigadas  IssueLigada[]
+  decisoes       DemandaDecisao[]
+  stakeholderUpdates DemandaStakeholderUpdate[]
+  bloqueadaPor   DemandaDependencia[] @relation("bloqueada")
+  bloqueiaOutras DemandaDependencia[] @relation("bloqueadora")
+
+  @@index([frenteId])
+  @@index([statusId])
+}
+
+model DemandaDependencia {
+  id          String  @id @default(cuid())
+  demandaId   String // a demanda que fica bloqueada
+  bloqueiaId  String // a demanda que bloqueia a outra
+
+  demanda     Demanda @relation("bloqueada", fields: [demandaId], references: [id], onDelete: Cascade)
+  bloqueia    Demanda @relation("bloqueadora", fields: [bloqueiaId], references: [id], onDelete: Cascade)
+
+  @@unique([demandaId, bloqueiaId])
+}
+
+model DemandaDecisao {
+  id        String   @id @default(cuid())
+  demandaId String
+  texto     String
+  autor     String
+  criadaEm  DateTime @default(now())
+
+  demanda   Demanda  @relation(fields: [demandaId], references: [id], onDelete: Cascade)
+
+  @@index([demandaId])
+}
+
+model DemandaStakeholderUpdate {
+  id           String   @id @default(cuid())
+  demandaId    String
+  pessoaNome   String
+  ultimoEnvio  String
+
+  demanda      Demanda  @relation(fields: [demandaId], references: [id], onDelete: Cascade)
+
+  @@unique([demandaId, pessoaNome])
+}
+
+model Tarefa {
+  id             String    @id @default(cuid())
+  demandaId      String
+  nome           String
+  descricao      String?   @default("")
+  statusId       String
+  tamanho        String    @default("S")
+  dataInicio     String?
+  dataFim        String?
+  tempoRastreado Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  demanda        Demanda        @relation(fields: [demandaId], references: [id], onDelete: Cascade)
+  status         StatusTarefa   @relation(fields: [statusId], references: [id])
+  subtarefas     Subtarefa[]
+  atividade      Atividade[]
+  pessoas        Pessoa[]
+  labels         WLabel[]
+  arquivos       Arquivo[]
+  links          Link[]
+  issuesLigadas  IssueLigada[]
+
+  @@index([demandaId])
+  @@index([statusId])
+}
+
+model Subtarefa {
+  id        String      @id @default(cuid())
+  tarefaId  String
+  nome      String
+  concluida Boolean     @default(false)
+  ordem     Int         @default(0)
+
+  tarefa    Tarefa      @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
+  atividade Atividade[]
+
+  @@index([tarefaId])
+}
+
+model Atividade {
+  id          String     @id @default(cuid())
+  tarefaId    String
+  subtarefaId String?
+  autor       String
+  texto       String
+  criadaEm    DateTime   @default(now())
+
+  tarefa      Tarefa     @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
+  subtarefa   Subtarefa? @relation(fields: [subtarefaId], references: [id], onDelete: SetNull)
+
+  @@index([tarefaId])
+}
+
+model Arquivo {
+  id        String   @id @default(cuid())
+  nome      String
+  url       String?
+  demandaId String?
+  tarefaId  String?
+
+  demanda   Demanda? @relation(fields: [demandaId], references: [id], onDelete: Cascade)
+  tarefa    Tarefa?  @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
+}
+
+model Link {
+  id        String   @id @default(cuid())
+  nome      String
+  url       String
+  demandaId String?
+  tarefaId  String?
+
+  demanda   Demanda? @relation(fields: [demandaId], references: [id], onDelete: Cascade)
+  tarefa    Tarefa?  @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
+}
+
+// Vínculo manual demanda/tarefa -> issue do Linear. O Linear não sabe dessa relação.
+model IssueLigada {
+  id        String  @id @default(cuid())
+  issueId   String // ex: "FIS-381"
+  demandaId String?
+  tarefaId  String?
+
+  demanda   Demanda? @relation(fields: [demandaId], references: [id], onDelete: Cascade)
+  tarefa    Tarefa?  @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
+}
+
+// Cache local do Linear (Fase 3) — nunca é fonte de verdade.
+model IssueCache {
+  issueId      String   @id
+  cycleId      String
+  dadosJson    Json
+  atualizadoEm DateTime @default(now())
+}
+
+model CycleCache {
+  cycleId      String   @id
+  dadosJson    Json
+  atualizadoEm DateTime @default(now())
+}
