@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
@@ -63,7 +63,6 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
   const [newDecision, setNewDecision] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [, startTransition] = useTransition();
 
   useBreadcrumbs([{ label: "Demandas", href: "/demandas" }, { label: local.name }]);
   useEffect(() => setLocal(demand), [demand]);
@@ -72,10 +71,6 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
     setDeleting(true);
     await deleteDemanda(local.id);
     router.push("/demandas");
-  }
-
-  function refresh() {
-    startTransition(() => router.refresh());
   }
 
   const frente = frentes.find((f) => f.id === local.frenteId)!;
@@ -103,7 +98,7 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
           fullWidth
           value={local.name}
           onChange={(e) => setLocal((p) => ({ ...p, name: e.target.value }))}
-          onBlur={() => updateDemandaCampos(local.id, { nome: local.name }).then(refresh)}
+          onBlur={() => updateDemandaCampos(local.id, { nome: local.name })}
           slotProps={{ input: { disableUnderline: true } }}
           sx={{ display: "block", my: 1.25, "& input": { fontFamily: "var(--font-space-grotesk)", fontSize: 24, fontWeight: 700 } }}
         />
@@ -124,7 +119,7 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
               outline={local.status !== s.name}
               onClick={() => {
                 setLocal((p) => ({ ...p, status: s.name }));
-                updateDemandaCampos(local.id, { statusId: s.id }).then(refresh);
+                updateDemandaCampos(local.id, { statusId: s.id });
               }}
             >
               {s.name}
@@ -143,7 +138,7 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
               fullWidth
               value={local.start || ""}
               onChange={(e) => setLocal((p) => ({ ...p, start: e.target.value }))}
-              onBlur={() => updateDemandaCampos(local.id, { dataInicio: local.start }).then(refresh)}
+              onBlur={() => updateDemandaCampos(local.id, { dataInicio: local.start })}
             />
             <TextField
               type="date"
@@ -151,7 +146,7 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
               fullWidth
               value={local.end || ""}
               onChange={(e) => setLocal((p) => ({ ...p, end: e.target.value }))}
-              onBlur={() => updateDemandaCampos(local.id, { dataFim: local.end || null }).then(refresh)}
+              onBlur={() => updateDemandaCampos(local.id, { dataFim: local.end || null })}
             />
           </Box>
         </Box>
@@ -173,7 +168,7 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
           placeholder="https://github.com/org/repo"
           value={local.repo}
           onChange={(e) => setLocal((p) => ({ ...p, repo: e.target.value }))}
-          onBlur={() => updateDemandaCampos(local.id, { repositorio: local.repo }).then(refresh)}
+          onBlur={() => updateDemandaCampos(local.id, { repositorio: local.repo })}
         />
       </Box>
 
@@ -185,11 +180,11 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
             folder={`demandas/${local.id}`}
             onAdd={(file) => {
               setLocal((p) => ({ ...p, files: [...p.files, { id: `tmp-${Date.now()}`, name: file.name, url: file.url }] }));
-              addDemandaArquivo(local.id, file.name, file.url).then(refresh);
+              addDemandaArquivo(local.id, file.name, file.url);
             }}
             onRemove={(id) => {
               setLocal((p) => ({ ...p, files: p.files.filter((f) => f.id !== id) }));
-              removeArquivo(id).then(refresh);
+              removeArquivo(id);
             }}
           />
         </Box>
@@ -200,7 +195,7 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
             selected={local.people}
             onChange={(v) => {
               setLocal((p) => ({ ...p, people: v }));
-              setDemandaPessoas(local.id, v).then(refresh);
+              setDemandaPessoas(local.id, v);
             }}
           />
           {local.people.length > 0 && (
@@ -216,7 +211,12 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
                       size="small"
                       sx={{ fontSize: 11.5, p: 0, minWidth: 0 }}
                       onClick={() => {
-                        markStakeholderUpdate(local.id, p).then(refresh);
+                        const today = new Date().toISOString().slice(0, 10);
+                        setLocal((prev) => ({
+                          ...prev,
+                          stakeholderUpdates: [...(prev.stakeholderUpdates || []).filter((s) => s.person !== p), { person: p, lastSentAt: today }],
+                        }));
+                        void markStakeholderUpdate(local.id, p);
                       }}
                     >
                       marcar hoje
@@ -235,11 +235,11 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
           links={local.links}
           onAdd={(nome, url) => {
             setLocal((p) => ({ ...p, links: [...p.links, { id: `tmp-${Date.now()}`, name: nome, url }] }));
-            addDemandaLink(local.id, nome, url).then(refresh);
+            addDemandaLink(local.id, nome, url);
           }}
           onRemove={(id) => {
             setLocal((p) => ({ ...p, links: p.links.filter((l) => l.id !== id) }));
-            removeLink(id).then(refresh);
+            removeLink(id);
           }}
         />
       </Box>
@@ -254,7 +254,7 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
             getLabel={(id) => wlabels.find((w) => w.id === id)?.name || id}
             onChange={(v) => {
               setLocal((p) => ({ ...p, wlabels: v }));
-              setDemandaWLabels(local.id, v).then(refresh);
+              setDemandaWLabels(local.id, v);
             }}
             placeholder="Buscar W.Label..."
           />
@@ -266,7 +266,7 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
             selected={local.skills || []}
             onChange={(v) => {
               setLocal((p) => ({ ...p, skills: v }));
-              updateDemandaCampos(local.id, { skills: v }).then(refresh);
+              updateDemandaCampos(local.id, { skills: v });
             }}
             placeholder="Buscar skill..."
           />
@@ -282,7 +282,7 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
             getLabel={demandName}
             onChange={(v) => {
               setLocal((p) => ({ ...p, blockedBy: v }));
-              setDemandaBlockedBy(local.id, v).then(refresh);
+              setDemandaBlockedBy(local.id, v);
             }}
             placeholder="Buscar demanda..."
           />
@@ -300,7 +300,7 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
             getLabel={demandName}
             onChange={(v) => {
               setLocal((p) => ({ ...p, blocks: v }));
-              setDemandaBlocks(local.id, v).then(refresh);
+              setDemandaBlocks(local.id, v);
             }}
             placeholder="Buscar demanda..."
           />
@@ -337,8 +337,13 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
           <Button
             sx={{ alignSelf: "flex-end" }}
             onClick={() => {
-              if (!newDecision.trim()) return;
-              addDemandaDecisao(local.id, newDecision.trim(), "Luiz Mendonça").then(refresh);
+              const texto = newDecision.trim();
+              if (!texto) return;
+              setLocal((prev) => ({
+                ...prev,
+                decisions: [...(prev.decisions || []), { id: `tmp-${Date.now()}`, text: texto, author: "Luiz Mendonça", at: new Date().toISOString() }],
+              }));
+              void addDemandaDecisao(local.id, texto, "Luiz Mendonça");
               setNewDecision("");
             }}
           >
@@ -356,7 +361,7 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
           placeholder="Anotações livres sobre a demanda..."
           value={local.observations}
           onChange={(e) => setLocal((p) => ({ ...p, observations: e.target.value }))}
-          onBlur={() => updateDemandaCampos(local.id, { observacoes: local.observations }).then(refresh)}
+          onBlur={() => updateDemandaCampos(local.id, { observacoes: local.observations })}
         />
       </Box>
 
@@ -385,7 +390,7 @@ export function DemandFullPage({ demand, allDemands }: { demand: Demand; allDema
                 ...p,
                 tasks: p.tasks.map((t) => (t.id === task.id ? { ...t, status: status.name, end: completionDate || t.end } : t)),
               }));
-              updateTarefaCampos(task.id, { statusId: status.id, ...(completionDate ? { dataFim: completionDate } : {}) }).then(refresh);
+              updateTarefaCampos(task.id, { statusId: status.id, ...(completionDate ? { dataFim: completionDate } : {}) });
             }}
           />
         ) : (

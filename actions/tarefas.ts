@@ -9,11 +9,22 @@ function revalidateAll() {
   revalidatePath("/tarefas");
 }
 
-export async function createTarefa(demandaId: string, nome: string) {
+export async function createTarefa(
+  demandaId: string,
+  nome: string,
+  extra?: Partial<{ statusId: string; tamanho: string; dataInicio: string | null; dataFim: string | null }>
+) {
   const t = await prisma.tarefa.create({
-    data: { demandaId, nome, statusId: "Backlog", dataInicio: new Date().toISOString().slice(0, 10) },
+    data: {
+      demandaId,
+      nome,
+      statusId: extra?.statusId || "Backlog",
+      tamanho: extra?.tamanho || "S",
+      dataInicio: extra?.dataInicio ?? new Date().toISOString().slice(0, 10),
+      dataFim: extra?.dataFim ?? undefined,
+      atividade: { create: { autor: "Sistema", texto: "Tarefa criada." } },
+    },
   });
-  await prisma.atividade.create({ data: { tarefaId: t.id, autor: "Sistema", texto: "Tarefa criada." } });
   revalidateAll();
   return t.id;
 }

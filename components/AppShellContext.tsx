@@ -14,7 +14,7 @@ interface AppShellValue {
   timer: Timer | null;
   now: number;
   playTask: (task: Task) => void;
-  pauseTimer: () => Promise<void>;
+  pauseTimer: () => Promise<number | null>;
   /** Navega pra tela da tarefa (rota própria: /demandas/[demandaId]/tarefas/[taskId]). */
   openTask: (task: Task) => void;
   goToIssue: (issueId: string) => void;
@@ -74,13 +74,15 @@ export function AppShellProvider({
     setNow(Date.now());
   }, []);
 
-  const pauseTimer = useCallback(async () => {
+  const pauseTimer = useCallback(async (): Promise<number | null> => {
+    let elapsed: number | null = null;
     setTimer((current) => {
       if (!current) return current;
-      const elapsed = Math.floor((Date.now() - current.startedAt) / 1000) + current.baseSeconds;
+      elapsed = Math.floor((Date.now() - current.startedAt) / 1000) + current.baseSeconds;
       void setTarefaTempoRastreado(current.taskId, elapsed);
       return null;
     });
+    return elapsed;
   }, []);
 
   const openTask = useCallback(

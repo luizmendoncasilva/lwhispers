@@ -1,13 +1,12 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { prisma } from "@/lib/db";
+import { CONFIG_LISTS_TAG } from "@/lib/config-lists-data";
 
 function revalidateConfig() {
+  revalidateTag(CONFIG_LISTS_TAG, { expire: 0 });
   revalidatePath("/configuracoes");
-  revalidatePath("/demandas");
-  revalidatePath("/tarefas");
-  revalidatePath("/dashboard");
 }
 
 type MetaInput = { nome: string; cor: string; descricao?: string };

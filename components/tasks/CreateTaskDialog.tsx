@@ -14,7 +14,7 @@ import Typography from "@mui/material/Typography";
 import { SectionLabel, ColorChip } from "@/components/ui/Bits";
 import { useConfigLists } from "@/components/ConfigListsContext";
 import { listDemandasLite } from "@/actions/demandas";
-import { createTarefa, updateTarefaCampos } from "@/actions/tarefas";
+import { createTarefa } from "@/actions/tarefas";
 import { SIZES } from "@/lib/mock-issues";
 
 export function CreateTaskDialog({ open, onClose, fixedDemandaId }: { open: boolean; onClose: () => void; fixedDemandaId?: string }) {
@@ -52,8 +52,7 @@ export function CreateTaskDialog({ open, onClose, fixedDemandaId }: { open: bool
   async function handleCreate() {
     if (!nome.trim() || !demandaId || creating) return;
     setCreating(true);
-    const id = await createTarefa(demandaId, nome.trim());
-    await updateTarefaCampos(id, {
+    const id = await createTarefa(demandaId, nome.trim(), {
       statusId: statusId || undefined,
       tamanho,
       dataInicio: inicio || null,
@@ -62,7 +61,6 @@ export function CreateTaskDialog({ open, onClose, fixedDemandaId }: { open: bool
     setCreating(false);
     onClose();
     router.push(`/demandas/${demandaId}/tarefas/${id}`);
-    router.refresh();
   }
 
   return (
